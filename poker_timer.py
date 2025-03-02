@@ -124,8 +124,6 @@ class PokerTimer():
                                                 "}")
 
   def update_mv_display_texts(self):
-    if self.current_state.current_level >= len(self.cfg.LEVELS):
-      self.current_state.current_level = len(self.cfg.LEVELS)-1
     self.mv_display.update_texts(self.sec_cnt)
 
   def showSettingsWindow(self):
