@@ -21,7 +21,7 @@ class PokerTimer():
                time_step_ms : int = 10,
                config_path: Optional[Path] = None
                ):
-    config_path = Path("configs/t10000.json") if config_path is None else config_path
+    config_path = Path("configs/t1000_long.json") if config_path is None else config_path
     if not config_path.exists():
       raise ValueError(f"Config file {config_path.absolute()} does not exist!")
 
@@ -124,8 +124,8 @@ class PokerTimer():
                                                 "}")
 
   def update_mv_display_texts(self):
-    if self.current_state.current_level >= len(self.cfg.BIG_BLIND_VALUES):
-      self.current_state.current_level = len(self.cfg.BIG_BLIND_VALUES)-1
+    if self.current_state.current_level >= len(self.cfg.LEVELS):
+      self.current_state.current_level = len(self.cfg.LEVELS)-1
     self.mv_display.update_texts(self.sec_cnt)
 
   def showSettingsWindow(self):

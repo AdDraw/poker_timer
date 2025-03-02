@@ -62,8 +62,7 @@ class PokerConfig:
   NAME: str = "NULL"
   STARTING_CHIP_AMOUNT: int = -1
   CHIP_INCREMENT : int = -1 # Smallest difference between chips
-  BIG_BLIND_VALUES : any = -1 # BB Values for every level of the game
-  LEVEL_PERIOD : MyTime = MyTime(-1,-1)
+  LEVELS : any = -1 # LEVEL BB & PERIOD Values for every level of the game
   NEW : bool = False
 
 Family =  MonospacedFontFamilies.MONOFONTO.value
@@ -83,8 +82,7 @@ class PokerGameState:
 
   def update_config(self, config: PokerConfig, update_counters: bool = True):
     self.config = config
-    assert(isinstance(config.LEVEL_PERIOD, MyTime))
-    assert(isinstance(config.BIG_BLIND_VALUES, list))
+    assert(isinstance(config.LEVELS, list))
 
     if update_counters:
       self.reset_timer()
@@ -94,12 +92,12 @@ class PokerGameState:
       self.config.NEW = False
       self.reset_level()
 
-    cur_bb = self.config.BIG_BLIND_VALUES[self.current_level-1]
+    cur_bb = self.config.LEVELS[self.current_level-1]["bb"]
     cur_sb = int(cur_bb / 2)
     if cur_sb % self.config.CHIP_INCREMENT != 0:
       raise ValueError(f"Small Blind cannot be smaller than chip increment sb: {cur_sb}, chip_inc: {self.config.CHIP_INCREMENT}")
-    if (self.current_level != len(self.config.BIG_BLIND_VALUES)-1):
-      nxt_bb = self.config.BIG_BLIND_VALUES[self.current_level]
+    if (self.current_level != len(self.config.LEVELS)):
+      nxt_bb = self.config.LEVELS[self.current_level]["bb"]
       nxt_sb = int(nxt_bb / 2)
     else:
       nxt_bb = "N/A"
@@ -121,7 +119,7 @@ class PokerGameState:
     self.second -= 1
 
   def nxt_level(self):
-    if self.current_level != len(self.config.BIG_BLIND_VALUES)-1:
+    if self.current_level != len(self.config.LEVELS):
       self.current_level += 1
     self.reset_timer()
 
@@ -137,7 +135,8 @@ class PokerGameState:
   def reset_timer(self, silent=True):
     if not silent:
       self.beep.play(maxtime=1500) # crop the sound to a box ring
-    self.minute, self.second = self.config.LEVEL_PERIOD._list()
+    cur_level_period = self.config.LEVELS[self.current_level-1]["period"]
+    self.minute, self.second = cur_level_period._list()
 
 def setupQFontDataBase():
   qfont_db = QFontDatabase()
@@ -175,7 +174,8 @@ def get_fixed_size_policy(): #DUNNO IF THIS WORKS
 
 def load_config_from_json(path: Path) -> PokerConfig | bool:
   def dict_to_config(_dict: dict):
-    _dict["LEVEL_PERIOD"] = MyTime(*_dict["LEVEL_PERIOD"])
+    for level in _dict["LEVELS"]:
+      _dict["LEVELS"][level["id"]]["period"] = MyTime(*_dict["LEVELS"][level["id"]]["period"])
     return PokerConfig(**_dict)
   if not path.exists() or path.is_dir():
     return False
