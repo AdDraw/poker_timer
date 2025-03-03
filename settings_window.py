@@ -8,6 +8,9 @@ from PyQt5.QtWidgets import (QFileDialog, QGridLayout, QHBoxLayout, QLineEdit,
 from utils import *
 
 
+
+
+
 class SettingsWindow(QWidget):
   def __init__(self, config: PokerConfig, bg_color: str = "rgb(120,120,120)"):
     super().__init__()
@@ -23,9 +26,12 @@ class SettingsWindow(QWidget):
     grand_layout = QHBoxLayout(self)
     self.setLayout(grand_layout)
 
+    self.config_label = MyLabel("config_label", self.cfg.NAME)
+
     # Buttons
     self.buttons = {}
     self.buttons["load_config"] = MyPushButton("config_load", text="Load Config", whats_this="Loads Config from file")
+    self.buttons["save_config"] = MyPushButton("config_save", text="Save Config", whats_this="Saves Config to a file")
 
     # Config
     tablewidget= QTableWidget()
@@ -43,6 +49,9 @@ class SettingsWindow(QWidget):
       period = level["period"]
       tablewidget.setItem(lid, 0,  QTableWidgetItem(f"{bb}"))
       tablewidget.setItem(lid, 1,  QTableWidgetItem(f"{period.m}:{period.s}"))
+
+
+    tablewidget.itemChanged.connect(self.update_config_on_cell_changed)
 
     tablewidget.horizontalHeader().setStretchLastSection(True)
     tablewidget.horizontalHeader().setSectionResizeMode(
@@ -66,9 +75,14 @@ class SettingsWindow(QWidget):
     self.graphWidget.setBackground('w')
 
 
+    HLay = QHBoxLayout()
+    HLay.addWidget(self.buttons["load_config"])
+    HLay.addWidget(self.buttons["save_config"])
+
     VLay = QVBoxLayout()
+    VLay.addWidget(self.config_label)
     VLay.addWidget(self.tablewidget)
-    VLay.addWidget(self.buttons["load_config"])
+    VLay.addLayout(HLay)
 
     self.grand_lay_objs = [self.graphWidget,
                            VLay]
@@ -82,6 +96,7 @@ class SettingsWindow(QWidget):
     # Events + Actions
     self.resizeEvent = self.customResizeEvent
     self.buttons["load_config"].clicked.connect(self.load_config_from_a_file)
+    self.buttons["save_config"].clicked.connect(self.save_config_to_a_file)
 
   def load_config_from_a_file(self):
     json_path = Path(QFileDialog(self, directory="configs").getOpenFileName(filter="File (*.json)")[0])
@@ -93,6 +108,32 @@ class SettingsWindow(QWidget):
       print(self.cfg)
       self.update()
 
+  def save_config_to_a_file(self):
+    config_writeable = dump_config_to_json(self.cfg)
+    if config_writeable:
+      json_path = Path(QFileDialog(self, directory="configs").getSaveFileName(filter="File (*.json)")[0])
+      if ".json" != json_path.suffix:
+        json_path = json_path.with_suffix(".json")
+
+      config_writeable["NAME"] = json_path.name.rstrip(json_path.suffix).upper()
+      json_object = json.dumps(config_writeable, indent=4)
+      with open(json_path, "w") as outfile:
+          outfile.write(json_object)
+
+  def update_config_on_cell_changed(self, item : QTableWidgetItem):
+      level_id = item.row()
+      if item.column() == 0:
+        key = "bb"
+        new_cell_value = int(item.data(0))
+      if item.column() == 1:
+        key = "period"
+        time_list = [int(x) for x in item.data(0).split(":")]
+        print(time_list)
+        new_cell_value = MyTime(*time_list)
+
+      self.cfg.LEVELS[level_id][key] = new_cell_value
+      self.update_data_line_y()
+      
   def customResizeEvent(self, event) -> None:
     width = self.width()
     height = self.height()
@@ -102,6 +143,8 @@ class SettingsWindow(QWidget):
     font = self.buttons["load_config"].font()
     font.setPointSize(ButtonLCFontSize)
     self.buttons["load_config"].setFont(font)
+    self.buttons["save_config"].setFont(font)
+    self.config_label.setFont(font)
 
     from math import floor
     w = floor(width*0.45)
@@ -118,11 +161,17 @@ class SettingsWindow(QWidget):
     self.tablewidget.horizontalHeaderItem(0).setFont(font)
     self.tablewidget.horizontalHeaderItem(1).setFont(font)
 
+  def update_data_line_y(self):
+    self.x = range(len(self.cfg.LEVELS))
+    bb_values = [level["bb"] for level in self.cfg.LEVELS]
+    self.data_line_y.setData(self.x, bb_values)
 
   def update(self):
     self.x = range(len(self.cfg.LEVELS))
     bb_values = [level["bb"] for level in self.cfg.LEVELS]
     self.data_line_y.setData(self.x, bb_values)
+
+    self.config_label.setText(self.cfg.NAME)
 
     for x in range(self.tablewidget.rowCount()):
       self.tablewidget.removeRow(x)

@@ -186,10 +186,13 @@ def load_config_from_json(path: Path) -> PokerConfig | bool:
 
 
 def dump_config_to_json(config: PokerConfig):
-  cdict = config.__dict__
-  cdict["LEVEL_PERIOD"] = cdict["LEVEL_PERIOD"]._list()
+  cdict_LEVELS = []
+  for level in config.LEVELS:
+    cdict_LEVELS.append({"id": level["id"], "bb": level["bb"], "period": level["period"]._list()})
+  cdict = {"LEVELS": None}
+  cdict["LEVELS"] = cdict_LEVELS
+  cdict["NAME"] = "NOT SET"
   return cdict
-
 
 class MyLabel(QLabel):
   def __init__(self,
